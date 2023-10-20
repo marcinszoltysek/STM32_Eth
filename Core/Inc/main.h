@@ -57,6 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define Eth_CS_Pin GPIO_PIN_4
+#define Eth_CS_GPIO_Port GPIOA
+#define Eth_SCK_Pin GPIO_PIN_5
+#define Eth_SCK_GPIO_Port GPIOA
+#define Eth_MISO_Pin GPIO_PIN_6
+#define Eth_MISO_GPIO_Port GPIOA
+#define Eth_MOSI_Pin GPIO_PIN_7
+#define Eth_MOSI_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 
