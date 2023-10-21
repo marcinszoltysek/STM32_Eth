@@ -26,6 +26,14 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "init_Eth.h"
+#include "socket.h"
+#include <stdio.h>
+#include <string.h>
+
+#define DHCP_SOCKET     0
+#define DNS_SOCKET      1
+#define HTTP_SOCKET     2
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -115,12 +123,14 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */
+
+
+
 	initEth();
-  for(;;)
-  {
-    osDelay(1);
+	while(1){
+			osDelay(1000);
   }
-  /* USER CODE END StartDefaultTask */
+  	  	  	  	  	  /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
