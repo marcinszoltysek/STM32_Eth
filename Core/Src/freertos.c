@@ -126,11 +126,14 @@ void StartDefaultTask(void *argument)
 
 
 
-	initEth();
+	IP_set();
+	socket_init();
+
+
 	while(1){
-			osDelay(1000);
+	echo_server();
   }
-  	  	  	  	  	  /* USER CODE END StartDefaultTask */
+  /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
