@@ -14,9 +14,10 @@ void W5500_Unselect(void);
 void W5500_ReadBuff(uint8_t* buff, uint16_t len);
 void W5500_WriteBuff(uint8_t* buff, uint16_t len);
 uint8_t W5500_ReadByte(void);
-void W5500_WriteByte(uint8_t byte);
-void Callback_IPAssigned(void);
-void Callback_IPConflict(void);
-void initEth();
+
+void IP_set();
+void socket_init ();
+char echo_server ();
+recive_from_mysocket(uint8_t rxBuff);
 
 #endif /* INC_INIT_ETH_H_ */

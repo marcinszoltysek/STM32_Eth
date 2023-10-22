@@ -26,8 +26,7 @@ Core/Src/init_Eth.o: ../Core/Src/init_Eth.c ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
  ../Core/Inc/spi.h ../Core/Inc/main.h ../Core/Inc/socket.h \
- ../Core/Inc/wizchip_conf.h ../Core/Inc/w5500.h ../Core/Inc/dhcp.h \
- ../Core/Inc/dns.h
+ ../Core/Inc/wizchip_conf.h ../Core/Inc/w5500.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -60,5 +59,3 @@ Core/Src/init_Eth.o: ../Core/Src/init_Eth.c ../Core/Inc/main.h \
 ../Core/Inc/socket.h:
 ../Core/Inc/wizchip_conf.h:
 ../Core/Inc/w5500.h:
-../Core/Inc/dhcp.h:
-../Core/Inc/dns.h:

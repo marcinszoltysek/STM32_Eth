@@ -15,13 +15,9 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include "socket.h"
-#include "dhcp.h"
-#include "dns.h"
 
 
-#define DHCP_SOCKET     0
-#define DNS_SOCKET      1
-#define HTTP_SOCKET     2
+
 
 void W5500_Select(void) {
     HAL_GPIO_WritePin(Eth_CS_GPIO_Port, Eth_CS_Pin, GPIO_PIN_RESET);
@@ -49,122 +45,106 @@ void W5500_WriteByte(uint8_t byte) {
     W5500_WriteBuff(&byte, sizeof(byte));
 }
 
-volatile bool ip_assigned = false;
+wiz_NetInfo net_info = {
+		.ip = {192,168,0,95},
+		.mac = {0xEA, 0x11, 0x22, 0x33, 0x44, 0xEA },
+		.sn = {255,255,255,0},
+		.gw = {192,168,0,1},
+		.dns = {8,8,8,8},
+		.dhcp = NETINFO_STATIC
+};
 
-void Callback_IPAssigned(void) {
-    ip_assigned = true;
-}
+uint8_t mySocket;
+uint8_t serverStatus;
+uint8_t state = 0;
+uint8_t rxBuff[100];
+uint8_t txBuff[100];
+int32_t dataSize = 0;
+uint16_t port;
 
-void Callback_IPConflict(void) {
-}
+void IP_set() {
+    uint8_t rx_tx_buff_sizes[] = {2, 2, 2, 2, 2, 2, 2, 2}; //2 bytes TX RX in any buffer
 
-// 1K should be enough, see https://forum.wiznet.io/t/topic/1612/2
-uint8_t dhcp_buffer[1024];
-// 1K seems to be enough for this buffer as well
-uint8_t dns_buffer[1024];
-
-void initEth() {
-
-    reg_wizchip_cs_cbfunc(W5500_Select, W5500_Unselect);
-    reg_wizchip_spi_cbfunc(W5500_ReadByte, W5500_WriteByte);
-    reg_wizchip_spiburst_cbfunc(W5500_ReadBuff, W5500_WriteBuff);
-
-    uint8_t rx_tx_buff_sizes[] = {2, 2, 2, 2, 2, 2, 2, 2};
+    reg_wizchip_cs_cbfunc(W5500_Select, W5500_Unselect);  //CS Pin UP function
+    reg_wizchip_spi_cbfunc(W5500_ReadByte, W5500_WriteByte); //Read 8bit function
+    reg_wizchip_spiburst_cbfunc(W5500_ReadBuff, W5500_WriteBuff); //Read register function
     wizchip_init(rx_tx_buff_sizes, rx_tx_buff_sizes);
 
-    wiz_NetInfo net_info = {
-        .mac  = { 0xEA, 0x11, 0x22, 0x33, 0x44, 0xEA },
-        .dhcp = NETINFO_DHCP
-    };
-    // set MAC address before using DHCP
-    setSHAR(net_info.mac);
-    DHCP_init(DHCP_SOCKET, dhcp_buffer);
-
-    reg_dhcp_cbfunc(
-        Callback_IPAssigned,
-        Callback_IPAssigned,
-        Callback_IPConflict
-    );
-
-    // actually should be called in a loop, e.g. by timer
-    uint32_t ctr = 10000;
-    while((!ip_assigned) && (ctr > 0)) {
-        DHCP_run();
-        ctr--;
-    }
-    if(!ip_assigned) {
-        return;
-    }
-
-    getIPfromDHCP(net_info.ip);
-    getGWfromDHCP(net_info.gw);
-    getSNfromDHCP(net_info.sn);
-
-    uint8_t dns[4];
-    getDNSfromDHCP(dns);
 
 
-    wizchip_setnetinfo(&net_info);
-    DNS_init(DNS_SOCKET, dns_buffer);
 
-    uint8_t addr[4];
-    {
-        char domain_name[] = "eax.me";
-        int8_t res = DNS_run(dns, (uint8_t*)&domain_name, addr);
-        if(res != 1) {
-            return;
-        }
-    }
-
-    uint8_t http_socket = HTTP_SOCKET;
-    uint8_t code = socket(http_socket, Sn_MR_TCP, 10888, 0);
-    if(code != http_socket) {
-        return;
-    }
-
-    code = connect(http_socket, addr, 80);
-    if(code != SOCK_OK) {
-        close(http_socket);
-        return;
-    }
-
-
-    {
-        char req[] = "GET / HTTP/1.0\r\nHost: eax.me\r\n\r\n";
-        uint16_t len = sizeof(req) - 1;
-        uint8_t* buff = (uint8_t*)&req;
-        while(len > 0) {
-;
-            int32_t nbytes = send(http_socket, buff, len);
-            if(nbytes <= 0) {
-                close(http_socket);
-                return;
-            }
-
-            len -= nbytes;
-        }
-    }
-
-
-    {
-        char buff[32];
-        for(;;) {
-            int32_t nbytes = recv(http_socket, (uint8_t*)&buff, sizeof(buff)-1);
-            if(nbytes == SOCKERR_SOCKSTATUS) {
-                break;
-            }
-
-            if(nbytes <= 0) {
-                break;
-            }
-
-            buff[nbytes] = '\0';
-        }
-    }
-
-    close(http_socket);
+    wizchip_setnetinfo(&net_info); //Send information to module W5500
 }
 
-void loop() {
-    HAL_Delay(1000);
+
+
+
+
+void socket_init () {
+	mySocket = socket(1, Sn_MR_TCP, 502, 0);
+	if(mySocket != 1){	// Error in socket creation
+	  	while(1);
+	}
+	listen(mySocket);
 }
+
+
+char echo_server (){
+	serverStatus = getSn_SR(mySocket);
+
+ 	switch(state){
+
+  	case 0: // Wait for client connections
+  		if(serverStatus == SOCK_ESTABLISHED){
+  			ctlnetwork(CN_GET_NETINFO, (void *) &net_info);
+  			port = getSn_PORT(mySocket);
+  			state++;
+  		}
+  		break;
+
+
+  	case 1: // Client has been connected
+  		if(serverStatus == SOCK_CLOSE_WAIT){ // Check for status
+  			close(mySocket);
+  			state++;
+  		}
+
+  		uint8_t intSocketRegister = getSn_IR(mySocket); // Check for incoming data
+  		if(intSocketRegister & (1<<2)){ // Check for socket 1 RECV interrupt
+  			dataSize = recv(mySocket, rxBuff, 50);
+  			recive_from_mysocket(rxBuff);
+
+  			if(send(mySocket,  (uint8_t *)"Dzieki za dane" , 14) != 14){
+  			  break;
+  			}
+
+  			// Clear interrupt register
+  			intSocketRegister &= (1<<2);
+  			setSn_IR(mySocket, intSocketRegister);
+  		}
+  		break;
+
+
+  	case 2:
+  		socket_init ();
+  		break;
+  	}
+}
+
+recive_from_mysocket(uint8_t  rxBuff[]) {
+	char diodeon[] = "Wlacz diode byku";
+	char diodeoff[] = "Wylacz diode byku";
+
+	  if (strcmp((char*)rxBuff, diodeon) == 0) {
+	        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+	    }
+
+	    if (strcmp((char*)rxBuff, diodeoff) == 0) {
+	        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+	    }
+	}
+
+
+
+
+

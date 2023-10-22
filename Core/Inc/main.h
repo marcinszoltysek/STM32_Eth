@@ -65,6 +65,8 @@ void Error_Handler(void);
 #define Eth_MISO_GPIO_Port GPIOA
 #define Eth_MOSI_Pin GPIO_PIN_7
 #define Eth_MOSI_GPIO_Port GPIOA
+#define LED_Pin GPIO_PIN_13
+#define LED_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
 
